@@ -32,6 +32,9 @@ class SignInPage(BasePage):
 
     def check_title(self, expected_title):
         return self.driver.title == expected_title
-
+    
+    def close(self):
+        # Метод для закриття браузера
+        self.driver.quit()
     
 
