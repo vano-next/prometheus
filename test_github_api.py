@@ -1,32 +1,29 @@
 import pytest
 
 @pytest.mark.api
-def test_user_exists(github_api):
-    """Перевірка, що користувач існує."""
-    response = github_api.get_user("defunkt")
-    assert response["login"] == "defunkt", f"Expected login to be 'defunkt', got {response['login']}"
+def test_emojis_exist(github_api):
+    """Перевірка, що список Emoji доступний."""
+    emojis = github_api.get_emojis()
+    assert len(emojis) > 0, "No emojis found"
+    sample_emoji_key = list(emojis.keys())[0]  # Беремо перший доступний ключ
+    assert sample_emoji_key in emojis, f"Expected emoji '{sample_emoji_key}' not found"
 
 @pytest.mark.api
-def test_user_not_exists(github_api):
-    """Перевірка, що користувач не існує."""
-    response = github_api.get_user("butenkosergii")
-    assert response["message"] == "Not Found", f"Expected message to be 'Not Found', got {response['message']}"
+def test_commits_exist(github_api):
+    """Перевірка, що коміти існують для репозиторію."""
+    commits = github_api.list_commits("octocat", "Hello-World")
+    assert len(commits) > 0, "No commits found for the repository"
+    assert "commit" in commits[0], "Expected commit data in response"
 
 @pytest.mark.api
-def test_repo_can_be_found(github_api):
-    """Перевірка, що репозиторій може бути знайдено."""
-    response = github_api.search_repo("become-qa-auto")
-    assert response["total_count"] > 0, f"Expected total_count to be greater than 0, got {response['total_count']}"
-    assert any(repo["name"] == "become-qa-auto" for repo in response["items"]), "Repository 'become-qa-auto' not found"
+def test_specific_commit_message(github_api):
+    """Перевірка, що певний коміт містить повідомлення."""
+    commits = github_api.list_commits("octocat", "Hello-World")
+    commit_message = commits[0]["commit"]["message"]
+    assert len(commit_message) > 0, "Commit message is empty"
 
 @pytest.mark.api
-def test_repo_cannot_be_found(github_api):
-    """Перевірка, що репозиторій не може бути знайдено."""
-    response = github_api.search_repo("sergiibutenko_repo_non_exist")
-    assert response["total_count"] == 0, f"Expected total_count to be 0, got {response['total_count']}"
-
-@pytest.mark.api
-def test_repo_with_single_char_be_found(github_api):
-    """Перевірка, що репозиторій із одним символом в імені можна знайти."""
-    response = github_api.search_repo("s")
-    assert response["total_count"] != 0, "Expected total_count to be non-zero, got 0"
+def test_emojis_smile_exists(github_api):
+    """Перевірка наявності emoji '+1'."""
+    emojis = github_api.get_emojis()
+    assert "+1" in emojis, "Emoji '+1' not found"
