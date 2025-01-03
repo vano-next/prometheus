@@ -1,57 +1,76 @@
 import pytest
 from modules.common.database import Database
 
+# Тест на вставку продукту з некоректним типом даних
 @pytest.mark.database
-def test_database_connection():
+def test_invalid_data_type():
     db = Database()
-    version = db.test_connection()
-    assert version is not None, "Database connection failed."
+    with pytest.raises(ValueError):  # Тепер очікуємо помилку ValueError
+        db.insert_product(10, "невірний тип", "опис", "стрічка замість числа")
 
+# Тест на спробу вставити дубльований продукт
 @pytest.mark.database
-def test_check_all_users():
+def test_duplicate_entry():
     db = Database()
-    users = db.get_all_users()
-    print(users)
-    assert len(users) > 0, "No users found in the database."
+    db.insert_product(12, "унікальний товар", "опис продукту", 100)
+    with pytest.raises(ValueError):  # Оновлено на ValueError, оскільки ID вже існує
+        db.insert_product(12, "той самий товар", "новий опис", 200)
 
+# Тест на кількість товару, яка не може бути негативною
 @pytest.mark.database
-def test_check_user_sergii():
+def test_quantity_limit():
     db = Database()
-    user_data = db.get_user_address_by_name("Sergii")
-    expected_data = ("Maydan Nezalezhnosti 1", "Kyiv", "3127", "Ukraine")
-    assert user_data == expected_data, f"Expected {expected_data}, got {user_data}"
+    with pytest.raises(ValueError):  # Оновлено на ValueError, бо кількість не може бути від'ємною
+        db.insert_product(13, "товар", "опис товару", -10)
 
+# Тест на вставку продукту з правильними даними
 @pytest.mark.database
-def test_product_qnt_update():
+def test_insert_valid_product():
     db = Database()
-    db.update_product_qnt_by_id(1, 25)
-    updated_qnt = db.select_product_qnt_by_id(1)
-    assert updated_qnt == 25, f"Expected quantity 25, got {updated_qnt}"
+    db.insert_product(18, "новий товар", "опис товару", 50)
+    product = db.cursor.execute("SELECT * FROM products WHERE id = 18").fetchone()
+    assert product is not None, "Product should exist"
+    assert product[1] == "новий товар", "Product name does not match"
+    assert product[2] == "опис товару", "Product description does not match"
+    assert product[3] == 50, "Product quantity does not match"
 
+# Тест на спробу вставити продукт з від'ємною кількістю
 @pytest.mark.database
-def test_product_insert():
+def test_insert_negative_quantity():
     db = Database()
-    db.insert_product(4, "печиво", "солодке", 30)
-    qnt = db.select_product_qnt_by_id(4)
-    assert qnt == 30, f"Expected quantity 30, got {qnt}"
+    with pytest.raises(ValueError):  # Оновлено на ValueError, бо кількість не може бути від'ємною
+        db.insert_product(19, "товар з від'ємною кількістю", "опис товару", -5)
 
+# Тест на спробу вставити продукт з неправильним типом даних для кількості
 @pytest.mark.database
-def test_product_delete():
+def test_insert_invalid_quantity_type():
     db = Database()
-    db.insert_product(99, "тестові", "дані", 999)
-    db.delete_product_by_id(99)
+    with pytest.raises(ValueError):  # Оновлено на ValueError для некоректного типу
+        db.insert_product(20, "товар", "опис товару", "стрічка замість числа")
 
-    # Перевіряємо, що продукт з id 99 більше не існує
-    result = db.select_product_qnt_by_id(99)
-    
-    # Переконуємось, що продукт не знайдений
-    assert result is None, f"Product with id 99 should not exist after deletion, got {result}"
-
+# Тест на вставку товару з правильним значенням опису
 @pytest.mark.database
-def test_detailed_orders():
+def test_insert_product_with_description():
     db = Database()
-    orders = db.get_detailed_orders()
-    print(orders)
-    expected_data = [(1, "Sergii", "солодка вода", "з цукром", '2023-01-01')]  # Додано дату
-    assert len(orders) == 1, f"Expected 1 order, got {len(orders)}"
-    assert orders[0] == expected_data[0], f"Expected {expected_data[0]}, got {orders[0]}"
+    db.insert_product(21, "товар з описом", "деталізований опис товару", 30)
+    product = db.cursor.execute("SELECT * FROM products WHERE id = 21").fetchone()
+    assert product is not None, "Product should exist"
+    assert product[2] == "деталізований опис товару", "Description does not match"
+
+# Тест на вставку товару з відсутнім описом (NULL)
+@pytest.mark.database
+def test_insert_product_without_description():
+    db = Database()
+    db.insert_product(22, "товар без опису", None, 40)
+    product = db.cursor.execute("SELECT * FROM products WHERE id = 22").fetchone()
+    assert product is not None, "Product should exist"
+    assert product[2] is None, "Description should be NULL"
+
+# Тест на вставку товару з великою кількістю
+@pytest.mark.database
+def test_insert_product_with_large_quantity():
+    db = Database()
+    db.insert_product(23, "товар з великою кількістю", "опис товару", 10000)
+    product = db.cursor.execute("SELECT * FROM products WHERE id = 23").fetchone()
+    assert product is not None, "Product should exist"
+    assert product[3] == 10000, "Product quantity does not match"

@@ -19,12 +19,12 @@ class Database:
         );
         """)
 
-        # Створення таблиці products
+        # Створення таблиці products (дозволяється NULL для description)
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
-            description TEXT NOT NULL,
+            description TEXT,  -- Дозволяється NULL
             quantity INTEGER NOT NULL
         );
         """)
@@ -103,16 +103,21 @@ class Database:
     def select_product_qnt_by_id(self, product_id):
         query = "SELECT quantity FROM products WHERE id = ?;"
         self.cursor.execute(query, (product_id,))
-        result = self.cursor.fetchone()
-        
-        if result is None:
-            return None  # Якщо продукт не знайдений, повертаємо None
-        
-        return result[0]  # Повертаємо кількість, якщо продукт знайдений
+        return self.cursor.fetchone()[0]
 
     def insert_product(self, product_id, name, description, qnt):
+        # Перевірка на тип кількості
+        if not isinstance(qnt, int) or qnt < 0:
+            raise ValueError("Quantity must be a non-negative integer")
+
+        # Перевірка на наявність продукту з таким ID
+        self.cursor.execute("SELECT COUNT(*) FROM products WHERE id = ?", (product_id,))
+        if self.cursor.fetchone()[0] > 0:
+            raise ValueError("Product with this ID already exists")
+        
+        # Вставка товару
         query = """
-        INSERT OR REPLACE INTO products (id, name, description, quantity)
+        INSERT INTO products (id, name, description, quantity)
         VALUES (?, ?, ?, ?);
         """
         self.cursor.execute(query, (product_id, name, description, qnt))
